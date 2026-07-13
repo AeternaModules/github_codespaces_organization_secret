@@ -17,15 +17,14 @@ EOT
     plaintext_value         = optional(string)
     selected_repository_ids = optional(set(number))
   }))
-  # --- Unconfirmed validation candidates, derived from github_codespaces_organization_secret's provider source ---
-  # Not auto-enabled: either a bespoke provider validator we can't safely translate,
-  # or a path that crosses a list-typed block (needs its own for_each wrapping).
-  # Review, translate into a real validation{} block above, and delete once confirmed.
-  # path: secret_name
-  #   source:    validateSecretNameFunc: no recognizable `if ... { errors = append(...) }` pattern - read it by hand
-  # path: encrypted_value
-  #   source:    validation.StringIsBase64(...) - no translation rule yet, add one
-  # path: visibility
-  #   source:    validateValueFunc: no recognizable `if ... { errors = append(...) }` pattern - read it by hand
+  validation {
+    condition = alltrue([
+      for k, v in var.codespaces_organization_secrets : (
+        v.encrypted_value == null || (can(base64decode(v.encrypted_value)))
+      )
+    ])
+    error_message = "must be valid base64"
+  }
+  # Note: 2 additional provider-side validators are enforced at apply time but not mirrored as validation{} blocks here (bespoke or non-mechanically-translatable).
 }
 
